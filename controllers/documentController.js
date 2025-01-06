@@ -67,7 +67,6 @@ exports.getDocumentById = async (req, res) => {
 };
 
 // UPDATE Document
-// UPDATE Document
 exports.updateDocument = async (req, res) => {
   try {
     const id = req.body.id;

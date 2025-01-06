@@ -34,6 +34,7 @@ const EmployeeSchema = new Schema({
   tax_category: { type: String },
   pph21: { type: Number },
   photo: { type: String },
+  points: { type: Number, default: 0 }, //buat di academy eureka
   date_added: { type: Date, default: Date.now },
   date_modified: { type: Date }
 });
