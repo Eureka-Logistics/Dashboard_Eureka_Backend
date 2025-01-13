@@ -20,6 +20,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const commentRoutes = require('./routes/comments');
 const documentHistoryRoutes = require('./routes/documentHistory');
+const jobpositionRoutes = require('./routes/jobPositions');
 
 const app = express();
 const PORT = process.env.PORT || 3344;
@@ -64,6 +65,7 @@ app.use('/customers', customerRoutes);
 app.use('/vendor', vendorRoutes);
 app.use('/comments', commentRoutes);
 app.use('/document-history', documentHistoryRoutes);
+app.use('/job-positions', jobpositionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

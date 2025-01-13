@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 // Skema untuk Employee
 const EmployeeSchema = new Schema({
-  emp_id: { type: String},
+  emp_id: { type: String, unique: true},
   full_name: { type: String, required: true },
   first_name: { type: String },
   last_name: { type: String },
@@ -16,6 +16,7 @@ const EmployeeSchema = new Schema({
   is_active: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   employee_status: { type: String },
   id_department: { type: Schema.Types.ObjectId, ref: 'Department' }, // Relasi dengan Department
+  id_jobposition: { type: Schema.Types.ObjectId, ref: 'JobPosition' },
   id_designation: { type: Schema.Types.ObjectId, ref: 'Designation' }, // Relasi dengan Designation
   id_job_level: { type: Schema.Types.ObjectId, ref: 'JobLevel' }, // Relasi dengan JobLevel
   id_bu: { type: Schema.Types.ObjectId, ref: 'BU' }, // Relasi dengan BusinessUnit
