@@ -92,37 +92,43 @@ exports.getAllEmployees = async (req, res) => {
 // Get Employees by ID
 exports.getEmployeeById = async (req, res) => {
   try {
-    // Step 1: Ambil data karyawan dan daftar nama dokumen dengan kategori
+    const idInput = req.params.id;
+    const isObjectId = mongoose.Types.ObjectId.isValid(idInput);
+
+    // Gunakan kondisi match fleksibel
+    const matchCondition = isObjectId
+      ? { $or: [{ _id: new mongoose.Types.ObjectId(idInput) }, { emp_id: idInput }] }
+      : { emp_id: { $regex: new RegExp(`^${idInput}$`, 'i') } };
+
+    // Step 1: Ambil data karyawan dan dokumen + kategori
     const employeeWithDocuments = await Employee.aggregate([
-      {
-        $match: { _id: new mongoose.Types.ObjectId(req.params.id) } // Filter berdasarkan ID karyawan
-      },
+      { $match: matchCondition },
       {
         $lookup: {
-          from: 'documents', // Nama koleksi dokumen
-          localField: '_id', // Field yang digunakan untuk join, id karyawan
-          foreignField: 'id_contact', // Field di tb_document yang mengacu ke id karyawan
-          as: 'documents' // Hasil join akan dimasukkan dalam array 'documents'
+          from: 'documents',
+          localField: '_id',
+          foreignField: 'id_contact',
+          as: 'documents'
         }
       },
       {
         $unwind: {
           path: '$documents',
-          preserveNullAndEmptyArrays: true // Biarkan dokumen tetap ada meski tidak ada dokumen
+          preserveNullAndEmptyArrays: true
         }
       },
       {
         $lookup: {
-          from: 'documentcategories', // Nama koleksi kategori dokumen
-          localField: 'documents.id_document_category', // Field kategori dokumen
-          foreignField: '_id', // Field ID kategori dokumen
-          as: 'documents.category' // Tambahkan data kategori ke dokumen
+          from: 'documentcategories',
+          localField: 'documents.id_document_category',
+          foreignField: '_id',
+          as: 'documents.category'
         }
       },
       {
         $unwind: {
           path: '$documents.category',
-          preserveNullAndEmptyArrays: true // Biarkan tetap null jika kategori tidak ditemukan
+          preserveNullAndEmptyArrays: true
         }
       },
       {
@@ -133,7 +139,7 @@ exports.getEmployeeById = async (req, res) => {
               document_name: '$documents.document_name',
               document_code: '$documents.document_code',
               id_document_category: '$documents.id_document_category',
-              category_name: '$documents.category.name', // Nama kategori
+              category_name: '$documents.category.name',
               date_added: '$documents.date_added',
               id_user: '$documents.id_user'
             }
@@ -146,34 +152,36 @@ exports.getEmployeeById = async (req, res) => {
       }
     ]);
 
-    // Step 2: Cek apakah employee ditemukan
+    // Step 2: Jika tidak ditemukan
     if (employeeWithDocuments.length === 0) {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    // Ambil data karyawan dan populate data terkait
-    const employee = await Employee.findById(req.params.id)
+    // Step 3: Cari data karyawan lengkap dengan populate
+    const employee = await Employee.findOne(matchCondition)
       .populate('id_department', 'department_name')
       .populate('id_designation', 'designation_name')
       .populate('id_job_level', 'joblevel_name')
       .populate('id_bu', 'bu_name')
       .populate('id_office', 'office_name')
-      .lean(); // Gunakan .lean() untuk mendapatkan data biasa, bukan Mongoose document
+      .lean();
 
-    // Populate nama lengkap (full_name) pada setiap dokumen
-    const populatedDocuments = await Promise.all(employeeWithDocuments[0].documents.map(async (doc) => {
-      const user = await Employee.findById(doc.id_user).select('full_name'); // Ambil full_name karyawan
-      return {
-        ...doc,
-        full_name: user ? user.full_name : null // Menambahkan full_name pada setiap dokumen
-      };
-    }));
+    // Step 4: Tambahkan full_name ke dokumen (id_user)
+    const populatedDocuments = await Promise.all(
+      employeeWithDocuments[0].documents.map(async (doc) => {
+        const user = await Employee.findById(doc.id_user).select('full_name');
+        return {
+          ...doc,
+          full_name: user ? user.full_name : null
+        };
+      })
+    );
 
-    // Menggabungkan hasil populate dengan dokumen
-    const result = { 
-      ...employee, 
-      document_count: employeeWithDocuments[0].document_count, 
-      documents: populatedDocuments // Menambahkan array dokumen dengan full_name
+    // Step 5: Gabungkan hasil
+    const result = {
+      ...employee,
+      document_count: employeeWithDocuments[0].document_count,
+      documents: populatedDocuments
     };
 
     res.status(200).json(result);
