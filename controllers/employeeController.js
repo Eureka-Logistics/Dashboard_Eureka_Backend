@@ -4,15 +4,27 @@ const mongoose = require('mongoose');
 // CREATE Employee
 exports.createEmployee = async (req, res) => {
   try {
+    // gabungkan semua data dari body dengan field tambahan (photo, date_modified)
     const employeeData = {
       ...req.body,
+      photo: req.file ? req.file.filename : null,
       date_modified: new Date(),
-      photo: req.file ? req.file.filename : null, // Simpan nama file foto
     };
 
+    // pastikan array data (kalau ada) tetap array
+    employeeData.family_data = req.body.family_data || [];
+    employeeData.education_data = req.body.education_data || [];
+    employeeData.work_history_data = req.body.work_history_data || [];
+    employeeData.courses_data = req.body.courses_data || [];
+    employeeData.social_activities_data = req.body.social_activities_data || [];
+    employeeData.emergency_relations_data = req.body.emergency_relations_data || [];
+    employeeData.former_relations_data = req.body.former_relations_data || [];
+    employeeData.guarantors_data = req.body.guarantors_data || [];
+
+    // buat instance Employee model
     const newEmployee = new Employee(employeeData);
     const savedEmployee = await newEmployee.save();
-    
+
     res.status(201).json({
       status: 'success',
       data: savedEmployee,
@@ -31,7 +43,7 @@ exports.createEmployee = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         status: 'error',
-        message: 'Gagal menambah data karyawan. Email sudah terdaftar.',
+        message: 'Gagal menambah data karyawan. Email atau ID unik sudah terdaftar.',
       });
     }
 
