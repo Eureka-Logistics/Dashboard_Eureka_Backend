@@ -208,11 +208,28 @@ exports.updateEmployee = async (req, res) => {
   try {
     const { id, ...updateData } = req.body;
 
+    // update foto kalau ada file baru
     if (req.file) {
-      updateData.photo = req.file.filename; // Simpan nama file baru jika foto diperbarui
+      updateData.photo = req.file.filename;
     }
 
-    const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, { new: true })
+    // pastikan array tetap array (tidak overwrite jadi kosong/null)
+    updateData.family_data = req.body.family_data || [];
+    updateData.education_data = req.body.education_data || [];
+    updateData.work_history_data = req.body.work_history_data || [];
+    updateData.courses_data = req.body.courses_data || [];
+    updateData.social_activities_data = req.body.social_activities_data || [];
+    updateData.emergency_relations_data = req.body.emergency_relations_data || [];
+    updateData.former_relations_data = req.body.former_relations_data || [];
+    updateData.guarantors_data = req.body.guarantors_data || [];
+
+    // tambahkan date_modified juga biar konsisten
+    updateData.date_modified = new Date();
+
+    const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true, // validasi model tetap jalan
+    })
       .populate('id_department', 'department_name')
       .populate('id_designation', 'designation_name')
       .populate('id_job_level', 'joblevel_name')
@@ -223,11 +240,15 @@ exports.updateEmployee = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    res.status(200).json(updatedEmployee);
+    res.status(200).json({
+      status: 'success',
+      data: updatedEmployee,
+    });
   } catch (error) {
+    console.error('Error while updating employee:', error);
     res.status(400).json({ error: error.message });
   }
-}
+};
 
 // DELETE Employee
 exports.deleteEmployee = async (req, res) => {
