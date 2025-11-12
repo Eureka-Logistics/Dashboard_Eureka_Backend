@@ -13,6 +13,30 @@ function calcAgeYears(d) {
   return age;
 }
 
+// Normalize education string to one of sma, d3, s1, s2, s3 or null
+function normalizeEdu(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim().toLowerCase();
+  if (['sma', 'smk', 'ma', 'paket c', 'high school'].some(k => s.includes(k))) return 'sma';
+  if (['d3', 'diploma 3', 'diploma iii', 'polytechnic'].some(k => s.includes(k))) return 'd3';
+  if (['s1', 'sarjana', 'strata satu', 'bachelor'].some(k => s.includes(k))) return 's1';
+  if (['s2', 'magister', 'master', 'strata dua'].some(k => s.includes(k))) return 's2';
+  if (['s3', 'doktor', 'doctorate', 'phd', 'strata tiga'].some(k => s.includes(k))) return 's3';
+  return null;
+}
+
+// Ordinal precedence: sma < d3 < s1 < s2 < s3
+function eduOrdinal(level) {
+  switch (level) {
+    case 'sma': return 1;
+    case 'd3': return 2;
+    case 's1': return 3;
+    case 's2': return 4;
+    case 's3': return 5;
+    default: return 0;
+  }
+}
+
 exports.getDashboardMetrics = async (req, res) => {
   try {
     // Total employees and by gender
@@ -86,50 +110,46 @@ exports.getDashboardMetrics = async (req, res) => {
       kes: { sudah: bpjsAgg[0]?.kes_has || 0, belum: bpjsAgg[0]?.kes_missing || 0 },
     };
 
-    // Education distribution: determine highest degree per employee (SMA, S1, S2, S3)
-    const eduAgg = await Employee.aggregate([
-      { $unwind: { path: '$education_data', preserveNullAndEmptyArrays: true } },
-      { $project: { employee: '$_id', level: { $toLower: '$education_data.level' } } },
-      {
-        $project: {
-          employee: 1,
-          weight: {
-            $switch: {
-              branches: [
-                { case: { $in: ['$level', ['sma', 'smk']] }, then: 1 },
-                { case: { $eq: ['$level', 's1'] }, then: 2 },
-                { case: { $eq: ['$level', 's2'] }, then: 3 },
-                { case: { $eq: ['$level', 's3'] }, then: 4 },
-              ],
-              default: 0,
-            }
-          }
-        }
-      },
-      { $group: { _id: '$employee', maxWeight: { $max: '$weight' } } },
-      { $group: { _id: '$maxWeight', count: { $sum: 1 } } },
-    ]);
-    const pendidikan = { sma: 0, s1: 0, s2: 0, s3: 0 };
-    for (const e of eduAgg) {
-      switch (e._id) {
-        case 1: pendidikan.sma += e.count; break;
-        case 2: pendidikan.s1 += e.count; break;
-        case 3: pendidikan.s2 += e.count; break;
-        case 4: pendidikan.s3 += e.count; break;
-        default: break; // ignore unknown levels
-      }
-    }
-
-    // Age range distribution (<30, 30-40, 41-50, >50)
-    const birthDates = await Employee.find({ birth_date: { $ne: null } }, { birth_date: 1 }).lean();
+    // Education and Age distribution using robust normalization
+    const peopleEduAge = await Employee.find({}, { education_data: 1, education: 1, birth_date: 1, age: 1 }).lean();
+    const pendidikan = { sma: 0, d3: 0, s1: 0, s2: 0, s3: 0 };
     const rentangUsia = { '<30': 0, '30-40': 0, '41-50': 0, '>50': 0 };
-    for (const emp of birthDates) {
-      const age = calcAgeYears(emp.birth_date);
-      if (age == null) continue;
-      if (age < 30) rentangUsia['<30']++;
-      else if (age <= 40) rentangUsia['30-40']++;
-      else if (age <= 50) rentangUsia['41-50']++;
-      else rentangUsia['>50']++;
+
+    for (const p of peopleEduAge) {
+      // Determine highest education per person
+      let maxW = 0;
+      let bestLevel = null;
+      // from array
+      if (Array.isArray(p.education_data)) {
+        for (const ed of p.education_data) {
+          const lvl = normalizeEdu(ed?.level);
+          const ord = eduOrdinal(lvl);
+          if (ord > maxW) { maxW = ord; bestLevel = lvl; }
+        }
+      }
+      // also consider top-level field to possibly upgrade
+      if (p.education) {
+        const lvl = normalizeEdu(p.education);
+        const ord = eduOrdinal(lvl);
+        if (ord > maxW) { maxW = ord; bestLevel = lvl; }
+      }
+      if (bestLevel) {
+        if (pendidikan[bestLevel] != null) pendidikan[bestLevel]++;
+      }
+
+      // Age bucket
+      let a = null;
+      if (p.birth_date) a = calcAgeYears(p.birth_date);
+      if (a == null && p.age != null) {
+        const parsed = parseInt(String(p.age).replace(/[^0-9-]/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) a = parsed;
+      }
+      if (a != null) {
+        if (a < 30) rentangUsia['<30']++;
+        else if (a <= 40) rentangUsia['30-40']++;
+        else if (a <= 50) rentangUsia['41-50']++;
+        else rentangUsia['>50']++;
+      }
     }
 
     return res.status(200).json({
