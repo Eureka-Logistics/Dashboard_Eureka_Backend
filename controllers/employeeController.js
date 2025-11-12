@@ -213,15 +213,28 @@ exports.updateEmployee = async (req, res) => {
       updateData.photo = req.file.filename;
     }
 
-    // pastikan array tetap array (tidak overwrite jadi kosong/null)
-    updateData.family_data = req.body.family_data || [];
-    updateData.education_data = req.body.education_data || [];
-    updateData.work_history_data = req.body.work_history_data || [];
-    updateData.courses_data = req.body.courses_data || [];
-    updateData.social_activities_data = req.body.social_activities_data || [];
-    updateData.emergency_relations_data = req.body.emergency_relations_data || [];
-    updateData.former_relations_data = req.body.former_relations_data || [];
-    updateData.guarantors_data = req.body.guarantors_data || [];
+    // Hanya set array jika disediakan di payload (hindari overwrite menjadi [])
+    const maybeSet = (field) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updateData[field] = req.body[field];
+      }
+    };
+    maybeSet('family_data');
+    maybeSet('education_data');
+    maybeSet('work_history_data');
+    maybeSet('courses_data');
+    maybeSet('social_activities_data');
+    maybeSet('emergency_relations_data');
+    maybeSet('former_relations_data');
+    maybeSet('guarantors_data');
+
+    // Normalisasi status is_active jika diberikan (Active/Inactive, case-insensitive)
+    if (Object.prototype.hasOwnProperty.call(req.body, 'is_active')) {
+      const v = String(req.body.is_active).trim().toLowerCase();
+      if (v === 'active' || v === 'inactive') {
+        updateData.is_active = v === 'active' ? 'Active' : 'Inactive';
+      }
+    }
 
     // tambahkan date_modified juga biar konsisten
     updateData.date_modified = new Date();
