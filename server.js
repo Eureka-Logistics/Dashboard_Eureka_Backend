@@ -24,6 +24,7 @@ const jobpositionRoutes = require('./routes/jobPositions');
 const candidateRoutes = require('./routes/candidateRoutes');
 const externalTransactionRoutes = require('./routes/externalTransactionRoutes');
 const externalCustomerRoutes = require('./routes/externalCustomerRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3344;
@@ -72,6 +73,7 @@ app.use('/job-positions', jobpositionRoutes);
 app.use('/candidates', candidateRoutes);
 app.use('/external-transactions', externalTransactionRoutes);
 app.use('/external-customers', externalCustomerRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
