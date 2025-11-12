@@ -22,6 +22,8 @@ const commentRoutes = require('./routes/comments');
 const documentHistoryRoutes = require('./routes/documentHistory');
 const jobpositionRoutes = require('./routes/jobPositions');
 const candidateRoutes = require('./routes/candidateRoutes');
+const externalTransactionRoutes = require('./routes/externalTransactionRoutes');
+const externalCustomerRoutes = require('./routes/externalCustomerRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3344;
@@ -68,6 +70,8 @@ app.use('/comments', commentRoutes);
 app.use('/document-history', documentHistoryRoutes);
 app.use('/job-positions', jobpositionRoutes);
 app.use('/candidates', candidateRoutes);
+app.use('/external-transactions', externalTransactionRoutes);
+app.use('/external-customers', externalCustomerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
