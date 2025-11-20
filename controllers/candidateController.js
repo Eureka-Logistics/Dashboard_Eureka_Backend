@@ -112,9 +112,10 @@ exports.getCandidateById = async (req, res) => {
 // UPDATE Candidate
 exports.updateCandidate = async (req, res) => {
   try {
-    const { id, ...updateData } = req.body;
+    const id = req.params.id || req.body.id;
+    const updateData = { ...req.body };
+    delete updateData.id;
 
-    // Ensure arrays remain as arrays
     updateData.workHistory = req.body.workHistory || [];
     updateData.socialActivities = req.body.socialActivities || [];
     updateData.education = req.body.education || [];
@@ -125,7 +126,6 @@ exports.updateCandidate = async (req, res) => {
       guarantors: req.body.others?.guarantors || [],
     };
 
-    // Add date_modified
     updateData.date_modified = new Date();
 
     const updatedCandidate = await Candidate.findByIdAndUpdate(id, updateData, {
