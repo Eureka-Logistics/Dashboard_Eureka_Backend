@@ -7,6 +7,14 @@ const processFormDataToJson = (req, res, next) => {
     }
     req.body.date_modified = new Date().toISOString().split('T')[0];
 
+    const optionalObjectIdFields = ['id_office', 'id_cabinet', 'id_user'];
+    optionalObjectIdFields.forEach((field) => {
+      const v = req.body[field];
+      if (v === '' || v === ' ' || v === 'null' || v === 'undefined' || v == null) {
+        delete req.body[field];
+      }
+    });
+
     // parse JSON string array fields
     const arrayFields = [
       'family_data',
