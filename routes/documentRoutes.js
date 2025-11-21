@@ -7,7 +7,7 @@ const path = require('path');
 const authenticateToken = require('../middleware/authenticateToken');
 
 // Routes untuk Document
-router.post('/add', authenticateToken, uploadFile.single('file_name'), processFormDataToJson, documentController.createDocument);
+router.post('/add', uploadFile.single('file_name'), processFormDataToJson, documentController.createDocument);
 router.put('/edit', authenticateToken, uploadFile.single('file_name'), processFormDataToJson, documentController.updateDocument);
 router.get('/', documentController.getAllDocuments);
 router.get('/get/:id', documentController.getDocumentById);
